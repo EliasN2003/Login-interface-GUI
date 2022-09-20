@@ -2,12 +2,18 @@
 # LOGIN INTERFACE
 
 from tkinter import *
-from tkinter import messagebox
+import sqlite3
 
 
 root = Tk()
 root.title("Login interface")
-root.geometry("900x550")
+width = 900
+height = 550
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+x = (screen_width/2) - (width/2)
+y = (screen_height/2) - (height/2)
+root.geometry("%dx%d+%d+%d" % (width, height, x, y))
 root.resizable(False, False)
 
 lamp_on = PhotoImage(file="images/lamp_on.png")
@@ -24,6 +30,14 @@ lamp = lamp_on
 username = StringVar()
 password = StringVar()
 password_confirm = StringVar()
+
+
+def database():
+    global conn, cursor
+    conn = sqlite3.connect("db_member.db")
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS `member` (mem_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
+                   "username TEXT, password TEXT, firstname TEXT)")
 
 
 # Dark/light mode for the signup page
@@ -62,12 +76,41 @@ def light_dark_mode():
         lamp = lamp_on
 
 
+def run():
+    print("Made it!")
+
+
 def login():
-    return
+    database()
+    if username.get() == "" or password.get() == "":
+        result_holder.config(text="Please fill all the required fields!", bg=back, fg="orange")
+    else:
+        cursor.execute("SELECT * FROM `member` WHERE `username` = ? and `password` = ?",
+                       (username.get(), password.get()))
+        if cursor.fetchone() is not None:
+            run()
+        else:
+            result_holder.config(text="Invalid username or password", bg=back, fg="red")
 
 
 def create_user():
-    return
+    database()
+    if username.get() == "" or password.get() == "" or password_confirm.get() == "":
+        result_holder.config(text="Please fill all the required fields!", bg=back, fg="orange")
+    else:
+        cursor.execute("SELECT * FROM `member` WHERE `username` = ?", (username.get(),))
+        if cursor.fetchone() is not None:
+            result_holder.config(text="Username is already taken", bg=back, fg="red")
+        else:
+            cursor.execute("INSERT INTO `member` (username, password, firstname) VALUES(?, ?, ?)",
+                           (str(username.get()), str(password.get()), str(password_confirm.get())))
+            conn.commit()
+            username.set("")
+            password.set("")
+            password_confirm.set("")
+            result_holder.config(text="Successfully Created!", bg=back, fg="black")
+        cursor.close()
+        conn.close()
 
 
 # Signup interface
@@ -106,8 +149,9 @@ def signup():
     signup_button = Button(root, text="Sign up", font=("Palatino Linotype", 16, "bold"), cursor='hand2', borderwidth=3,
                            bg=back, fg=fore, command=create_user)
     signup_button.grid(row=5, column=0, columnspan=2, ipadx=8, pady=20)
-    user_created_holder = Label(root, text="", font=("Palatino Linotype", 16, "bold"), bg=back)
-    user_created_holder.grid(row=6, column=0, columnspan=2, ipady=10, ipadx=15)
+    global result_holder
+    result_holder = Label(root, text="", font=("Palatino Linotype", 16, "bold"), bg=back)
+    result_holder.grid(row=6, column=0, columnspan=2, ipady=10, ipadx=15)
     login_label = Label(root, text="Already have an account?", font=("Palatino Linotype", 16, "bold"),
                         borderwidth=3, bg=back, fg=fore)
     login_label.grid(row=7, column=0, columnspan=2, pady=(27, 0), sticky=N)
