@@ -30,12 +30,15 @@ lamp = lamp_on
 username = StringVar()
 password = StringVar()
 password_confirm = StringVar()
+result_label = Label(text="")
 
 
+# Communicates with the database whenever needed
 def database():
     global conn, cursor
     conn = sqlite3.connect("db_member.db")
     cursor = conn.cursor()
+    # Creates table if it doesn't exist
     cursor.execute("CREATE TABLE IF NOT EXISTS `member` (mem_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
                    "username TEXT, password TEXT, firstname TEXT)")
 
@@ -76,31 +79,46 @@ def light_dark_mode():
         lamp = lamp_on
 
 
+# Function after a successful login
 def run():
-    print("Made it!")
+    result_label.config(text="Successful login!", bg="green", fg=fore)
 
 
+# Logs in to the app
 def login():
     database()
+    # One or more fields are blank message
     if username.get() == "" or password.get() == "":
-        result_holder.config(text="Please fill all the required fields!", bg=back, fg="orange")
+        result_label.config(text="Please fill all the required fields!", bg="#C06A09", fg=fore)
+
+    # Checks if username and password exist in the database
     else:
         cursor.execute("SELECT * FROM `member` WHERE `username` = ? and `password` = ?",
                        (username.get(), password.get()))
+        # Logs in if username and password are correct
         if cursor.fetchone() is not None:
+            result_label.config(text="", bg=back, fg=fore)
             run()
+        # Wrong password or username message
         else:
-            result_holder.config(text="Invalid username or password", bg=back, fg="red")
+            result_label.config(text="Invalid username or password", bg="red", fg=fore)
 
 
+# Creates a new user
 def create_user():
     database()
     if username.get() == "" or password.get() == "" or password_confirm.get() == "":
-        result_holder.config(text="Please fill all the required fields!", bg=back, fg="orange")
+        result_label.config(text="Please fill all the required fields!", bg="#C06A09", fg=fore)
     else:
         cursor.execute("SELECT * FROM `member` WHERE `username` = ?", (username.get(),))
+        # Username already exists
         if cursor.fetchone() is not None:
-            result_holder.config(text="Username is already taken", bg=back, fg="red")
+            result_label.config(text="Username is already taken", bg="red", fg=fore)
+
+        # Passwords are not the same
+        elif password.get() != password_confirm.get():
+            result_label.config(text="Passwords don't match", bg="red", fg=fore)
+
         else:
             cursor.execute("INSERT INTO `member` (username, password, firstname) VALUES(?, ?, ?)",
                            (str(username.get()), str(password.get()), str(password_confirm.get())))
@@ -108,7 +126,7 @@ def create_user():
             username.set("")
             password.set("")
             password_confirm.set("")
-            result_holder.config(text="Successfully Created!", bg=back, fg="black")
+            result_label.config(text="Successfully Created!", bg="green", fg=fore)
         cursor.close()
         conn.close()
 
@@ -149,9 +167,9 @@ def signup():
     signup_button = Button(root, text="Sign up", font=("Palatino Linotype", 16, "bold"), cursor='hand2', borderwidth=3,
                            bg=back, fg=fore, command=create_user)
     signup_button.grid(row=5, column=0, columnspan=2, ipadx=8, pady=20)
-    global result_holder
-    result_holder = Label(root, text="", font=("Palatino Linotype", 16, "bold"), bg=back)
-    result_holder.grid(row=6, column=0, columnspan=2, ipady=10, ipadx=15)
+    global result_label
+    result_label = Label(root, text="", font=("Palatino Linotype", 16, "bold"), bg=back)
+    result_label.grid(row=6, column=0, columnspan=2, ipady=10, ipadx=15)
     login_label = Label(root, text="Already have an account?", font=("Palatino Linotype", 16, "bold"),
                         borderwidth=3, bg=back, fg=fore)
     login_label.grid(row=7, column=0, columnspan=2, pady=(27, 0), sticky=N)
@@ -182,15 +200,16 @@ def login_interface():
     username_label.grid(row=2, column=0, sticky=E)
     password_label = Label(root, text="Password: ", font=("Palatino Linotype", 17, "bold"), bg=back, fg=fore)
     password_label.grid(row=3, column=0, sticky=E, pady=10)
-    username_entrybar = Entry(root, borderwidth=3, font=("Palatino Linotype", 15), bg=back, fg=fore)
+    username_entrybar = Entry(root, textvariable=username, borderwidth=3, font=("Palatino Linotype", 15), bg=back, fg=fore)
     username_entrybar.grid(row=2, column=1, sticky=W)
-    password_entrybar = Entry(root, borderwidth=3, font=("Palatino Linotype", 15), bg=back, fg=fore)
+    password_entrybar = Entry(root, textvariable=password, borderwidth=3, font=("Palatino Linotype", 15), bg=back, fg=fore)
     password_entrybar.grid(row=3, column=1, sticky=W)
     login_button = Button(root, text="Login", font=("Palatino Linotype", 16, "bold"), cursor='hand2', borderwidth=3,
                           bg=back, fg=fore, command=login)
     login_button.grid(row=4, column=0, columnspan=2, ipadx=8, pady=15)
-    divider = Label(root, bg=back, fg=fore)
-    divider.grid(row=5, column=0, columnspan=2, pady=53)
+    global result_label
+    result_label = Label(root, text="", font=("Palatino Linotype", 16, "bold"), bg=back)
+    result_label.grid(row=5, column=0, columnspan=2, ipady=10, ipadx=15, pady=(74, 0))
     signup_label = Label(root, text="Don't have an account?", font=("Palatino Linotype", 16, "bold"),
                          borderwidth=3, bg=back, fg=fore)
     signup_label.grid(row=6, column=0, columnspan=2)
@@ -204,7 +223,8 @@ def login_interface():
 
 
 # Runs the program
-login_interface()
+if __name__ == "__main__":
+    login_interface()
 
 
 root.mainloop()
